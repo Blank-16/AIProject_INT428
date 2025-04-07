@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groq Chat Assistant</title>
+    <link rel="stylesheet" href="src/output.css">
+    <script src="/chat.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
+    <style>
+        .chat-container::-webkit-scrollbar { width: 6px; }
+        .chat-container::-webkit-scrollbar-track { background: #f1f1f1; }
+        .chat-container::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        
+        .markdown-body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        }
+        .markdown-body code {
+            background-color: #f3f4f6; 
+            padding: 0.25rem 0.5rem; 
+            border-radius: 0.25rem; 
+            font-size: 0.875rem; 
+            font-family: monospace; 
+        }
+        .markdown-body pre {
+            background-color: #f3f4f6; 
+            padding: 1rem; 
+            border-radius: 0.5rem; 
+            overflow-x: auto; 
+            margin: 0.5rem 0; 
+        }
+        .markdown-body pre code {
+            background-color: transparent; 
+            padding: 0; 
+        }
+        .markdown-body ul {
+            list-style-type: disc; 
+            padding-left: 1.5rem;
+            margin: 0.5rem 0; 
+        }
+        .markdown-body ol {
+            list-style-type: decimal; 
+            padding-left: 1.5rem; 
+            margin: 0.5rem 0; 
+        }
+        .markdown-body strong {
+            font-weight: 600; 
+        }
+        .markdown-body em {
+            font-style: italic; 
+        }
+        .markdown-body a {
+            color: #3b82f6; 
+            text-decoration: none; 
+        }
+        .markdown-body a:hover {
+            text-decoration: underline; 
+        }
+    </style>
+</head>
+<body class="bg-white h-screen">
+    <div class="flex flex-col h-full">
+        
+        <div class="flex-1 overflow-y-auto p-4 space-y-4 max-w-3xl mx-auto w-full chat-container">
+            <div id="chat-messages" class="space-y-4">
+                
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">AI</div>
+                    <div class="bg-white p-4 rounded-lg shadow-md max-w-[80%] ai-message markdown-body">
+                        <div class="text-gray-700">Hello! How can I help you today?</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class=" bg-blue-100 py-4 px-4">
+            <div class="max-w-3xl mx-auto flex items-center space-x-4">
+                <input 
+                    type="text" 
+                    id="user-input"
+                    placeholder="Type your message..." 
+                    class="flex-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    autocomplete="off"
+                />
+                <button 
+                    id="send-btn"
+                    class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors shadow-2xs shadow-blue-900 hover:cursor-pointer "
+                    disabled
+                >
+                    Send
+                </button>
+            </div>
+            <div class="text-center mt-2 text-sm text-gray-500">
+                Powered by Groq API
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
