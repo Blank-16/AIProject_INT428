@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groq Chat Assistant</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
+    <style>
+        .chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .markdown-body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        }
+
+        .markdown-body code {
+            background-color: #f3f4f6;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            font-family: monospace;
+        }
+
+        .markdown-body pre {
+            background-color: #f3f4f6;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin: 0.5rem 0;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+
+        .markdown-body ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+            margin: 0.5rem 0;
+        }
+
+        .markdown-body ol {
+            list-style-type: decimal;
+            padding-left: 1.5rem;
+            margin: 0.5rem 0;
+        }
+
+        .markdown-body strong {
+            font-weight: 600;
+        }
+
+        .markdown-body em {
+            font-style: italic;
+        }
+
+        .markdown-body a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+
+        .markdown-body a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body class="bg-white h-screen">
+    <div class="flex flex-col h-full">
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-4 max-w-3xl mx-auto w-full chat-container">
+            <div id="chat-messages" class="space-y-4">
+
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">AI</div>
+                    <div class="bg-white p-4 rounded-lg shadow-md max-w-[80%] ai-message markdown-body">
+                        <div class="text-gray-700">Hello! How can I help you today?</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class=" bg-blue-100 py-4 px-4">
+            <div class="max-w-3xl mx-auto flex items-center space-x-4">
+                <input type="text" id="user-input" placeholder="Type your message..."
+                    class="flex-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    autocomplete="off" />
+                <button id="send-btn"
+                    class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors shadow-2xs shadow-blue-900 hover:cursor-pointer "
+                    disabled>
+                    Send
+                </button>
+            </div>
+            <div class="text-center mt-2 text-sm text-gray-500">
+                Powered by Groq API
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        const API_KEY = "api_key_goes_here";
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        // Configure marked
+        marked.setOptions({
+            breaks: true,
+            highlight: (code) => hljs.highlightAuto(code).value
+        });
+
+        // Enable send button when input has text
+        userInput.addEventListener('input', () => {
+            sendBtn.disabled = userInput.value.trim() === '';
+        });
+
+        async function callGroqAPI(userMessage) {
+            try {
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: 'llama-3.3-70b-versatile',
+                        messages: [{ role: 'user', content: userMessage },
+                        {
+                            role: "system",
+                            content: "Talk like an assistant for social media services and act as a social media tracker. Only provide personalized information about social media and marketing management. For any other questions, respond with: 'Sorry, I specialize exclusively in social media management.",
+                        },],
+                        temperature: 0.7
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error?.message || 'API Error');
+                return data.choices[0].message.content;
+            } catch (error) {
+                console.error('Error:', error);
+                return `Error: ${error.message}`;
+            }
+        }
+
+        function renderMarkdown(content) {
+            const rawHtml = marked.parse(content);
+            return DOMPurify.sanitize(rawHtml);
+        }
+
+        function addMessage(message, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`;
+
+            const messageContent = isUser ?
+                `<div class="text-white">${message}</div>` :
+                `<div class="text-gray-700 markdown-body">${renderMarkdown(message)}</div>`;
+
+            messageDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-full ${isUser ? 'bg-green-500' : 'bg-blue-500'} flex items-center justify-center text-white">
+                    ${isUser ? 'YOU' : 'AI'}
+                </div>
+                <div class="${isUser ? 'bg-blue-500 user-message' : 'bg-white ai-message'} p-4 rounded-lg shadow-md max-w-[80%]">
+                    ${messageContent}
+                </div>
+            `;
+
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function handleSend() {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            userInput.disabled = true;
+            sendBtn.disabled = true;
+
+            addMessage(message, true);
+            userInput.value = '';
+
+            // Loading indicator
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'flex items-start gap-3';
+            loadingDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">AI</div>
+                <div class="bg-white p-4 rounded-lg shadow-md max-w-[80%] animate-pulse">
+                    <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                </div>
+            `;
+            chatMessages.appendChild(loadingDiv);
+
+            try {
+                const response = await callGroqAPI(message);
+                chatMessages.removeChild(loadingDiv);
+                addMessage(response);
+            } catch (error) {
+                chatMessages.removeChild(loadingDiv);
+                addMessage(error.toString());
+            } finally {
+                userInput.disabled = false;
+                userInput.focus();
+            }
+        }
+
+        // Event Listeners
+        sendBtn.addEventListener('click', handleSend);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+            }
+        });
+    </script>
+
+</body>
+
+</html>
