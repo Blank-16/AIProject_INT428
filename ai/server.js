@@ -31,7 +31,7 @@ app.post('/api/chat', async (req, res) => {
                 messages: [
                     {
                         role: "system",
-                        content: "Talk like an assistant for social media services and act as a social media tracker. Only provide personalized information about social media and marketing management. For any other questions, respond with: 'Sorry, I specialize exclusively in social media management.",
+                        content: "Talk like an assistant for social media services and act as a social media tracker. Only provide personalized information about social media and marketing management. For any other questions, respond with: 'Sorry, I specialize exclusively in social media management.'. Do not provide any other information and if user writes something inappropriate flag them.",
                     },
                     {
                         role: "user",
