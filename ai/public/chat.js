@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-
     const chatMessages = document.getElementById('chat-messages');
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
@@ -24,7 +23,12 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const data = await response.json();
-            if (!response.ok) throw new Error(data.error?.message || 'API Error');
+
+            if (!response.ok) {
+                console.error('API Error:', data);
+                throw new Error(data.error || 'API Error');
+            }
+
             return data.choices[0].message.content;
         } catch (error) {
             console.error('Error:', error);
@@ -33,44 +37,72 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderMarkdown(content) {
-        const rawHtml = marked.parse(content);
-        return DOMPurify.sanitize(rawHtml);
-    }
-
-
-
-    function addMessage(message, isUser = false) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`;
-
-        const messageContent = isUser ?
-            `<div class="text-white">${message}</div>` :
-            `<div class="text-gray-700 markdown-body">${renderMarkdown(message)}</div>`;
-
-        messageDiv.innerHTML = `
-            <div class="w-8 h-8 rounded-full ${isUser ? 'bg-green-500' : 'bg-blue-500'} flex items-center justify-center text-white">
-                ${isUser ? 'YOU' : 'AI'}
-            </div>
-            <div class="${isUser ? 'bg-blue-500 user-message' : 'bg-white ai-message'} p-4 rounded-lg shadow-md max-w-[80%]">
-                ${messageContent}
-            </div>
-        `;
-
-        // Add new message to the bottom
-        chatMessages.appendChild(messageDiv);
-
-        const chatContainer = document.querySelector('.chat-container');
-
-        const isNearBottom = chatContainer.scrollHeight - chatContainer.clientHeight - chatContainer.scrollTop < 100;
-
-        if (isNearBottom) {
-            requestAnimationFrame(() => {
-                chatContainer.scrollTop = chatContainer.scrollHeight;
+        try {
+            // Configure marked options
+            marked.setOptions({
+                gfm: true, // GitHub Flavored Markdown
+                breaks: true, // Add <br> on single line breaks
+                headerIds: false, // Disable header IDs
+                highlight: function (code, language) {
+                    if (language && hljs.getLanguage(language)) {
+                        try {
+                            return hljs.highlight(code, { language }).value;
+                        } catch (err) { }
+                    }
+                    return hljs.highlightAuto(code).value;
+                }
             });
+
+            // Parse markdown and sanitize the output
+            const rawHtml = marked.parse(content);
+            return DOMPurify.sanitize(rawHtml, {
+                ALLOWED_TAGS: [
+                    'p', 'br', 'strong', 'em', 'code', 'pre', 'blockquote',
+                    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                    'ul', 'ol', 'li', 'a'
+                ],
+                ALLOWED_ATTR: ['href', 'class']
+            });
+        } catch (error) {
+            console.error('Markdown parsing error:', error);
+            return DOMPurify.sanitize(content);
         }
     }
 
+    function addMessage(message, isUser = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'flex items-start gap-3';
 
+        if (isUser) {
+            // User message - positioned on the right
+            messageDiv.className += ' justify-end';
+            messageDiv.innerHTML = `
+                <div class="chat-bubble user-message p-4">
+                    <div>${DOMPurify.sanitize(message)}</div>
+                </div>
+                <div class="avatar user-avatar">YOU</div>
+            `;
+        } else {
+            // AI message - positioned on the left
+            messageDiv.innerHTML = `
+                <div class="avatar ai-avatar">AI</div>
+                <div class="chat-bubble ai-message p-4">
+                    <div class="markdown-body">${renderMarkdown(message)}</div>
+                </div>
+            `;
+        }
+
+        chatMessages.appendChild(messageDiv);
+
+        // Highlight code blocks in the new message
+        messageDiv.querySelectorAll('pre code').forEach((block) => {
+            hljs.highlightElement(block);
+        });
+
+        // Scroll to bottom
+        const chatContainer = document.querySelector('.chat-container');
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
 
     async function handleSend() {
         const message = userInput.value.trim();
@@ -102,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
             addMessage(response);
         } catch (error) {
             chatMessages.removeChild(loadingDiv);
-            addMessage(error.toString());
+            addMessage('Sorry, there was an error connecting to the AI service. Please try again later.');
         } finally {
             userInput.disabled = false;
             userInput.focus();
@@ -113,8 +145,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     }
-
-
 
     sendBtn.addEventListener('click', handleSend);
     userInput.addEventListener('keypress', (e) => {

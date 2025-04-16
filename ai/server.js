@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
-const path = require('path'); // Add this
+const path = require('path');
 const app = express();
 
 // Serve static files from public directory
@@ -13,19 +13,26 @@ app.use(express.json());
 
 // Add root route to serve HTML
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'chat.html'));
+    res.sendFile(path.join(__dirname, './public', 'smm1.html'));
 });
 
 app.post('/api/chat', async (req, res) => {
     try {
         const { message } = req.body;
+
+        if (!message) {
+            return res.status(400).json({ error: 'Message is required' });
+        }
+
+        // Log to confirm the API key is loaded correctly
+        console.log("Using API key:", process.env.API_KEY ? "API key is present" : "API key is missing");
+
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+                'Authorization': `Bearer ${process.env.API_KEY}`
             },
-            // In the POST /api/chat route
             body: JSON.stringify({
                 model: 'llama-3.3-70b-versatile',
                 messages: [
@@ -36,15 +43,25 @@ app.post('/api/chat', async (req, res) => {
                     {
                         role: "user",
                         content: message
-                    },
+                    }
                 ],
                 temperature: 0.7
             })
         });
 
         const data = await response.json();
-        res.status(response.status).json(data);
+
+        // Log response status for debugging
+        console.log("API response status:", response.status);
+
+        if (!response.ok) {
+            console.error("API error:", data);
+            return res.status(response.status).json({ error: data.error?.message || 'API Error' });
+        }
+
+        res.status(200).json(data);
     } catch (error) {
+        console.error("Server error:", error);
         res.status(500).json({ error: error.message });
     }
 });
